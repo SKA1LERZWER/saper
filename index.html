@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Игра: Кристаллы и Мины + Ставки</title>
+  <style>
+    /* Анимация появления страницы */
+    @keyframes fadeInPage {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('background.png') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+      animation: fadeInPage 1s ease forwards;
+    }
+    nav {
+      background: #4a148c;
+      padding: 15px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      animation: fadeInPage 1.2s ease forwards;
+    }
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #a855f7;
+      box-shadow: 0 0 20px #a855f7;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      animation: fadeInPage 1.4s ease forwards;
+    }
+    h1 {
+      margin: 20px 0;
+    }
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(5, 80px);
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+      animation: fadeInPage 1.6s ease forwards;
+    }
+    .cell {
+      width: 80px;
+      height: 80px;
+      background: url('crystal-icon.png') center/contain no-repeat;
+      border: 2px solid #673ab7;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s ease;
+      animation: fadeInPage 1.8s ease forwards;
+    }
+    .cell:hover:not(.revealed) {
+      transform: scale(1.1);
+      box-shadow: 0 0 10px #a855f7;
+    }
+    .cell.revealed {
+      background: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: revealCellAnim 0.3s ease forwards;
+    }
+    @keyframes revealCellAnim {
+      from {
+        transform: scale(0.6);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    .cell img {
+      width: 60%;
+      height: 60%;
+      animation: fadeIn 0.3s ease forwards;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+    .cell.bomb {
+      background-color: #8e24aa;
+      animation: bombFlash 0.6s ease infinite alternate;
+    }
+    @keyframes bombFlash {
+      0% { box-shadow: 0 0 8px 2px #ff1744; }
+      100% { box-shadow: 0 0 20px 5px #f50057; }
+    }
+    .cell.safe {
+      background-color: none;
+    }
+    #controls {
+      margin: 15px 0;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      animation: fadeInPage 2s ease forwards;
+    }
+#controls input, #controls select {
+  padding: 10px 14px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 2px solid #673ab7;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px transparent;
+  min-width: 160px;
+}
+
+#controls input::placeholder {
+  color: #cccccc;
+}
+
+#controls input:focus, #controls select:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 10px #a855f7;
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+#controls select {
+  appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px 18px;
+  padding-right: 34px;
+}
+
+#controls select, #controls option {
+  color: white;
+  background-color: #1e1e2f; /* Тёмно-фиолетовый/тёмный фон */
+}
+
+#controls option {
+  padding: 10px;
+  font-size: 16px;
+}
+
+    #controls button {
+      padding: 8px 16px;
+      background-color: #a855f7;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #controls button:hover {
+      background-color: #9333ea;
+    }
+    #balance, #coef, #current-win {
+      margin-top: 10px;
+      font-size: 18px;
+      animation: fadeInPage 2.2s ease forwards;
+    }
+    #message-box {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      max-width: 320px;
+      background-color: rgba(0, 0, 0, 0.85);
+      border: 2px solid #a855f7;
+      border-radius: 10px;
+      padding: 15px 40px 15px 15px;
+      font-size: 18px;
+      color: white;
+      box-shadow: 0 0 15px #a855f7;
+      display: none;
+      animation: fadeInMessage 0.5s ease forwards;
+      z-index: 1000;
+    }
+    #message-box.show {
+      display: block;
+    }
+    #message-box .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      font-weight: bold;
+      line-height: 1;
+      user-select: none;
+    }
+    @keyframes fadeInMessage {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+
+    #skin-panel {
+  max-width: 800px;
+  margin: 20px auto;
+  background: rgba(0, 0, 0, 0.75);
+  border: 2px solid #a855f7;
+  border-radius: 10px;
+  padding: 20px;
+  color: white;
+  box-shadow: 0 0 15px #a855f7;
+  text-align: center;
+}
+
+.skin-item {
+  display: inline-block;
+  margin: 10px;
+  padding: 10px;
+  border: 2px solid #673ab7;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  width: 150px;
+  vertical-align: top;
+}
+
+.skin-item img {
+  width: 100px;
+  height: 100px;
+}
+
+.skin-item button {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background-color: #a855f7;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+}
+
+.skin-item img {
+  width: 64px;       /* или 48px — по желанию */
+  height: auto;      /* сохраняет пропорции */
+  display: block;
+  margin: 0 auto;
+}
+
+  </style>
+</head>
+<body>
+  <nav>🎮 Кристаллы и Мины — Игра на удачу!</nav>
+  <div class="container">
+    <h1>Ставь и выигрывай</h1>
+    <div id="balance">Баланс: 100 💰</div>
+
+<div id="skin-panel">
+  <h2>Выбор скина</h2>
+  <div id="skins-list"></div>
+</div>
+
+
+    <div id="controls">
+      <input type="text" id="bet" placeholder="Введите ставку" min="1" />
+      <select id="mine-count">
+        <option value="1">1 мина</option>
+        <option value="3" selected>3 мины</option>
+        <option value="5">5 мин</option>
+        <option value="7">7 мин</option>
+      </select>
+      <button onclick="startGame()">Начать игру</button>
+      <button onclick="collectWin()">Забрать выигрыш</button>
+      <button onclick="watchAd()">Смотреть рекламу</button>
+      <button onclick="resetGame()">Сброс игры</button>
+    </div>
+
+    <div id="coef">Коэффициент: 1.00x</div>
+    <div id="current-win">Текущий выигрыш: 0 💰</div>
+    <div id="game-board"></div>
+  </div>
+
+  <div id="message-box">
+    <button class="close-btn" onclick="hideMessage()">×</button>
+    <span id="message-text"></span>
+  </div>
+
+  <script>
+    document.getElementById('bet').addEventListener('input', function () {
+  this.value = this.value.replace(/[^\d]/g, '');
+});
+    const coefficientTable = {
+      1: [1.05, 1.10, 1.16, 1.22, 1.30, 1.38, 1.47, 1.57, 1.68, 1.80, 1.93, 2.07, 2.22, 2.38, 2.55, 2.73, 2.92, 3.12, 3.33, 3.55, 3.78, 4.02, 4.27, 4.53, 4.80],
+      3: [1.09, 1.24, 1.43, 1.65, 1.91, 2.21, 2.56, 2.96, 3.42, 3.95, 4.56, 5.26, 6.06, 6.97, 8.00, 9.17, 10.50, 12.00, 13.70, 15.62, 17.78, 20.21],
+      5: [1.15, 1.34, 1.57, 1.84, 2.17, 2.56, 3.02, 3.56, 4.21, 4.97, 5.87, 6.93, 8.17, 9.63, 11.33, 13.33, 15.67, 18.40, 21.60, 25.35],
+      7: [1.20, 1.43, 1.70, 2.02, 2.41, 2.88, 3.45, 4.14, 4.97, 5.97, 7.18, 8.65, 10.42, 12.56, 15.14, 18.23, 21.94, 26.37]
+    };
+
+    let boardSize = 5;
+    let totalCells = boardSize * boardSize;
+    let cells = [];
+    let bombs = new Set();
+    let revealedCount = 0;
+    let balance = 100;
+    let currentBet = 0;
+    let coefficient = 1.0;
+    let gameActive = false;
+    let currentMineCount = 3;
+
+    const gameBoard = document.getElementById('game-board');
+    const balanceDisplay = document.getElementById('balance');
+    const coefDisplay = document.getElementById('coef');
+    const winDisplay = document.getElementById('current-win');
+    const messageBox = document.getElementById('message-box');
+    const messageText = document.getElementById('message-text');
+    let messageTimeout;
+
+    function updateUI() {
+      coefDisplay.textContent = `Коэффициент: ${coefficient.toFixed(2)}x`;
+      winDisplay.textContent = `Текущий выигрыш: ${(currentBet * coefficient).toFixed(2)} 💰`;
+      balanceDisplay.textContent = `Баланс: ${balance.toFixed(2)} 💰`;
+    }
+
+    function startGame() {
+      const betInput = document.getElementById('bet');
+      const mineSelect = document.getElementById('mine-count');
+      const bet = parseInt(betInput.value);
+      const mineCount = parseInt(mineSelect.value);
+
+      if (!bet || bet < 1 || bet > balance) {
+        showMessage("Введите корректную ставку");
+        return;
+      }
+
+      currentMineCount = mineCount;
+      bombs = new Set();
+      cells = [];
+      revealedCount = 0;
+      gameBoard.innerHTML = '';
+      gameActive = true;
+      coefficient = 1.0;
+      currentBet = bet;
+      balance -= bet;
+      hideMessage();
+
+      while (bombs.size < mineCount) {
+        bombs.add(Math.floor(Math.random() * totalCells));
+      }
+
+      for (let i = 0; i < totalCells; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.onclick = () => revealCell(i);
+        gameBoard.appendChild(cell);
+        cells.push(cell);
+      }
+
+      updateUI();
+    }
+
+function revealCell(index) {
+  if (!gameActive) return;
+  const cell = cells[index];
+  if (cell.classList.contains('revealed')) return;
+
+  cell.classList.add('revealed');
+  cell.innerHTML = '';
+
+  if (bombs.has(index)) {
+  cell.classList.add('bomb');
+  const img = document.createElement('img');
+  img.src = getSelectedBombIcon();
+  cell.appendChild(img);
+    gameActive = false;
+    currentBet = 0;
+    revealAllCells();
+    showMessage("💥 Вы проиграли! Попробуйте снова.");
+  } else {
+    cell.classList.add('safe');
+    const img = document.createElement('img');
+    img.src = getSelectedCrystalIcon();  // <- Здесь меняем на выбранный скин
+    cell.appendChild(img);
+    revealedCount++;
+    if (revealedCount === totalCells - currentMineCount) {
+      const winnings = currentBet * coefficient;
+      balance += winnings;
+      updateUI();
+      showMessage(`🏆 Победа! Вы открыли все безопасные клетки и выиграли ${winnings.toFixed(2)} 💰!`);
+      currentBet = 0;
+      gameActive = false;
+      revealAllCells();
+    }
+    const table = coefficientTable[currentMineCount];
+    coefficient = table[Math.min(revealedCount - 1, table.length - 1)] || coefficient;
+    updateUI();
+  }
+}
+
+function revealAllCells() {
+  cells.forEach((cell, index) => {
+    if (!cell.classList.contains('revealed')) {
+      cell.classList.add('revealed');
+      cell.innerHTML = '';
+      if (bombs.has(index)) {
+        cell.classList.add('bomb');
+        const img = document.createElement('img');
+  img.src = getSelectedBombIcon();
+        cell.appendChild(img);
+      } else {
+        cell.classList.add('safe');
+        const img = document.createElement('img');
+  img.src = getSelectedCrystalIcon();
+        cell.appendChild(img);
+      }
+    }
+  });
+}
+
+
+function collectWin() {
+  if (!gameActive || currentBet === 0) return;
+  const winnings = currentBet * coefficient;
+  balance += winnings;
+  revealAllCells(); // 👈 Добавлено для показа мин
+  gameActive = false;
+  showMessage(`🎉 Вы забрали ${winnings.toFixed(2)} 💰!`);
+  currentBet = 0;
+  updateUI();
+}
+
+function revealAllCells() {
+  cells.forEach((cell, index) => {
+    if (!cell.classList.contains('revealed')) {
+      cell.classList.add('revealed');
+      cell.innerHTML = '';
+      if (bombs.has(index)) {
+        cell.classList.add('bomb');
+        const img = document.createElement('img');
+        img.src = getSelectedBombIcon();  // <== добавим функцию получения скина для мины
+        cell.appendChild(img);
+      } else {
+        cell.classList.add('safe');
+        const img = document.createElement('img');
+        img.src = getSelectedCrystalIcon();
+        cell.appendChild(img);
+      }
+    }
+  });
+}
+
+function getSelectedBombIcon() {
+  const skin = skins.find(s => s.id === selectedSkinId);
+  // Можно, например, добавить в объект скина поле с названием файла мины
+  // Для простоты сейчас вернём просто фиксированную картинку мины, можно расширить
+  return skin?.bomb || 'bomb.png';
+}
+
+function resetGame() {
+  gameActive = false;
+  currentBet = 0;
+  coefficient = 1.0;
+  bombs.clear();
+  cells = [];
+  revealedCount = 0;
+  currentMineCount = 3;
+  gameBoard.innerHTML = '';
+  updateUI();
+  hideMessage();
+}
+
+    
+    function showMessage(msg) {
+      clearTimeout(messageTimeout);
+      messageText.textContent = msg;
+      messageBox.classList.add('show');
+      // Автоматически скрываем через 5 секунд
+      messageTimeout = setTimeout(() => {
+        hideMessage();
+      }, 5000);
+    }
+
+    function hideMessage() {
+      messageBox.classList.remove('show');
+      clearTimeout(messageTimeout);
+    }
+
+    function watchAd() {
+      balance += 10;
+      showMessage("📺 Вы посмотрели рекламу и получили 10 💰!");
+      updateUI();
+    }
+
+    updateUI();
+
+const skins = [
+  { id: 'default', name: 'Фиолетовый', price: 0, crystal: 'crystal.png', bomb: 'bomb.png', bought: true, 
+    imgWidth: 50, imgHeight: 50, 
+    bgColor: '#4a148c', 
+    navBgColor: '#4a148c', 
+    buttonBgColor: '#a855f7',
+    bodyBgImage: "url('background.png')" },
+  { id: 'green', name: 'Зелёный', price: 50, crystal: 'cristal-green.png', bomb: 'bomb-green.png', bought: false, 
+    imgWidth: 80, imgHeight: 50,
+    bgColor: '#1b5e20',
+    navBgColor: '#2e7d32',
+    buttonBgColor: '#43a047',
+    bodyBgImage: "url('background-green.png')" },
+  { id: 'red', name: 'Красный', price: 75, crystal: 'cristal-red.png', bomb: 'bomb-red.png', bought: false,
+    imgWidth: 80, imgHeight: 50,
+    bgColor: '#b71c1c',
+    navBgColor: '#c62828',
+    buttonBgColor: '#e53935',
+    bodyBgImage: "url('background-red.png')" }
+];
+
+window.onload = () => {
+  const skin = skins.find(s => s.id === selectedSkinId);
+  if (skin) applySkinDesign(skin);
+  renderSkins();
+  updateUI();
+};
+
+
+function applySkinDesign(skin) {
+  document.body.style.backgroundImage = skin.bodyBgImage || '';
+  document.querySelector('nav').style.backgroundColor = skin.navBgColor || '';
+  
+  // Изменяем цвет кнопок
+  document.querySelectorAll('#controls button, #skin-panel button').forEach(btn => {
+    btn.style.backgroundColor = skin.buttonBgColor || '';
+    btn.style.borderColor = skin.buttonBgColor || '';
+  });
+  
+  // Можно также менять цвета контейнеров, текста и др.
+  document.querySelector('.container').style.borderColor = skin.bgColor || '';
+  document.querySelector('.container').style.boxShadow = `0 0 20px ${skin.bgColor || '#a855f7'}`;
+  document.getElementById('skin-panel').style.borderColor = skin.bgColor || '';
+  document.getElementById('skin-panel').style.boxShadow = `0 0 15px ${skin.bgColor || '#a855f7'}`;
+}
+
+
+function getSelectedBombIcon() {
+  const skin = skins.find(s => s.id === selectedSkinId);
+  return skin?.bomb || 'bomb.png';
+}
+
+let selectedSkinId = 'default';
+
+function renderSkins() {
+  const container = document.getElementById('skins-list');
+  container.innerHTML = '';
+  skins.forEach(skin => {
+    const item = document.createElement('div');
+    item.className = 'skin-item';
+    item.innerHTML = `
+      <img src="${skin.crystal}" alt="${skin.name}" 
+        style="width: ${skin.imgWidth}px; height: ${skin.imgHeight}px; display: block; margin: 0 auto;" />
+      <div><strong>${skin.name}</strong></div>
+      <div>Цена: ${skin.price} 💰</div>
+      <button onclick="handleSkinAction('${skin.id}')">
+        ${skin.bought ? (skin.id === selectedSkinId ? 'Выбран' : 'Выбрать') : 'Купить'}
+      </button>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function handleSkinAction(id) {
+  const skin = skins.find(s => s.id === id);
+  if (!skin.bought) {
+    if (balance >= skin.price) {
+      balance -= skin.price;
+      skin.bought = true;
+      selectedSkinId = skin.id;
+      applySkinDesign(skin);
+      showMessage(`✅ Куплен скин "${skin.name}"`);
+      updateUI();
+    } else {
+      showMessage('Недостаточно средств');
+      return;
+    }
+  } else {
+    selectedSkinId = skin.id;
+    applySkinDesign(skin);
+  }
+  renderSkins();
+}
+
+
+
+function getSelectedCrystalIcon() {
+  const skin = skins.find(s => s.id === selectedSkinId);
+  return skin?.crystal || 'crystal.png';
+}
+
+  renderSkins();
+  </script>
+</body>
+</html>
