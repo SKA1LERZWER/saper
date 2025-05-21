@@ -147,7 +147,6 @@
     }
 
     .cell.bomb {
-      background-color: #8e24aa;
       animation: bombFlash 0.6s ease infinite alternate;
     }
 
@@ -376,6 +375,42 @@
         width: 48px;
       }
     }
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 84px)); /* Максимум 84px для каждой ячейки */
+  gap: 5px; /* Отступ между ячейками */
+  justify-content: center; /* Центрирование сетки */
+  max-width: 100%; /* Ограничиваем ширину сетки */
+}
+
+/* Стили для ячеек игрового поля */
+.game-grid div {
+  max-width: 84px; /* Максимальная ширина ячейки */
+  max-height: 84px; /* Максимальная высота ячейки */
+  width: 100%; /* Адаптивная ширина */
+  height: 100%; /* Адаптивная высота */
+  background-color: #ccc; /* Пример фона, замените на ваш стиль */
+  border: 1px solid #000; /* Пример границы, замените на ваш стиль */
+  box-sizing: border-box; /* Учитываем border в размерах */
+}
+
+/* Адаптивность для мобильных устройств */
+@media screen and (max-width: 600px) {
+  .game-grid {
+    grid-template-columns: repeat(5, minmax(0, 60px)); /* Меньше для мобильных */
+  }
+  .game-grid div {
+    max-width: 60px;
+    max-height: 60px;
+  }
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
   </style>
 </head>
 <body>
@@ -400,7 +435,6 @@
       <button onclick="startGame()">Начать игру</button>
       <button onclick="collectWin()">Забрать выигрыш</button>
       <button onclick="watchAd()">Смотреть рекламу</button>
-      <button onclick="resetGame()">Сброс игры</button>
     </div>
 
     <div id="coef">Коэффициент: 1.00x</div>
@@ -444,6 +478,11 @@
     const messageText = document.getElementById('message-text');
     let messageTimeout;
 
+function setSkinSelectionEnabled(enabled) {
+  document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = !enabled);
+  document.querySelector('#controls button[onclick="startGame()"]').disabled = !enabled;
+}
+
     function updateUI() {
       coefDisplay.textContent = `Коэффициент: ${coefficient.toFixed(2)}x`;
       winDisplay.textContent = `Текущий выигрыш: ${(currentBet * coefficient).toFixed(2)} 💰`;
@@ -461,6 +500,8 @@
         return;
       }
 
+ gameActive = true;
+setSkinSelectionEnabled(false);
       currentMineCount = mineCount;
       bombs = new Set();
       cells = [];
@@ -487,10 +528,12 @@
         gameBoard.appendChild(cell);
         cells.push(cell);
       }
-
       updateUI();
+      document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = true);
+      document.querySelector('#controls button[onclick="startGame()"]').disabled = true;
     }
 
+    
     function revealCell(index) {
       if (!gameActive) return;
       const cell = cells[index];
@@ -508,6 +551,8 @@
         currentBet = 0;
         revealAllCells();
         showMessage("💥 Вы проиграли! Попробуйте снова.");
+        document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = false);
+        document.querySelector('#controls button[onclick="startGame()"]').disabled = false;
       } else {
         cell.classList.add('safe');
         const img = document.createElement('img');
@@ -522,12 +567,19 @@
           currentBet = 0;
           gameActive = false;
           revealAllCells();
+        document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = false);
+        document.querySelector('#controls button[onclick="startGame()"]').disabled = false;
         }
         const table = coefficientTable[currentMineCount];
         coefficient = table[Math.min(revealedCount - 1, table.length - 1)] || coefficient;
         updateUI();
       }
     }
+
+function setSkinSelectionEnabled(enabled) {
+  document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = !enabled);
+  document.querySelector('#controls button[onclick="startGame()"]').disabled = !enabled;
+}
 
     function revealAllCells() {
       cells.forEach((cell, index) => {
@@ -558,19 +610,9 @@
       showMessage(`🎉 Вы забрали ${winnings.toFixed(2)} 💰!`);
       currentBet = 0;
       updateUI();
-    }
+document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = false);
+document.querySelector('#controls button[onclick="startGame()"]').disabled = false;
 
-    function resetGame() {
-      gameActive = false;
-      currentBet = 0;
-      coefficient = 1.0;
-      bombs.clear();
-      cells = [];
-      revealedCount = 0;
-      currentMineCount = 3;
-      gameBoard.innerHTML = '';
-      updateUI();
-      hideMessage();
     }
 
     function showMessage(msg) {
@@ -659,18 +701,47 @@
       });
     }
 
-    function applySkinDesign(skin) {
-      document.body.style.backgroundImage = skin.bodyBgImage || '';
-      document.querySelector('nav').style.backgroundColor = skin.navBgColor || '';
-      document.querySelectorAll('#controls button, #skin-panel button').forEach(btn => {
-        btn.style.backgroundColor = skin.buttonBgColor || '';
-        btn.style.borderColor = skin.buttonBgColor || '';
-      });
-      document.querySelector('.container').style.borderColor = skin.bgColor || '';
-      document.querySelector('.container').style.boxShadow = `0 0 20px ${skin.bgColor || '#a855f7'}`;
-      document.getElementById('skin-panel').style.borderColor = skin.bgColor || '';
-      document.getElementById('skin-panel').style.boxShadow = `0 0 15px ${skin.bgColor || '#a855f7'}`;
-    }
+//applySkinDesign Здесь хранится изменения дизайна при выборе скина
+
+function applySkinDesign(skin) {
+  document.body.style.backgroundImage = skin.bodyBgImage || '';
+  document.querySelector('nav').style.backgroundColor = skin.navBgColor || '';
+  document.querySelectorAll('#controls button, #skin-panel button').forEach(btn => {
+    btn.style.backgroundColor = skin.buttonBgColor || '';
+    btn.style.borderColor = skin.buttonBgColor || '';
+  });
+  document.querySelector('.container').style.borderColor = skin.bgColor || '';
+  document.querySelector('.container').style.boxShadow = `0 0 20px ${skin.bgColor || '#a855f7'}`;
+  document.getElementById('skin-panel').style.borderColor = skin.bgColor || '';
+  document.getElementById('skin-panel').style.boxShadow = `0 0 15px ${skin.bgColor || '#a855f7'}`;
+
+  document.querySelectorAll('#controls input, #controls select').forEach(el => {
+    el.style.borderColor = skin.bgColor || '#673ab7';
+    el.style.boxShadow = `0 0 10px ${skin.bgColor || '#a855f7'}`;
+    el.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+    el.style.color = 'white';
+  });
+
+  // Обновляем стили .skin-item
+  setTimeout(() => {
+    document.querySelectorAll('.skin-item').forEach(item => {
+      item.style.borderColor = skin.bgColor || '#673ab7';
+      item.style.boxShadow = `0 0 10px ${skin.bgColor || '#a855f7'}`;
+      item.style.backgroundColor = 'rgba(255, 255, 255, 0.07)';
+      item.style.color = 'white';
+    });
+
+    document.querySelectorAll('.skin-item button').forEach(btn => {
+      btn.style.backgroundColor = skin.buttonBgColor || '#a855f7';
+      btn.style.borderColor = skin.buttonBgColor || '#a855f7';
+    });
+  }, 0);
+
+  // Обновляем message-box
+  const messageBox = document.getElementById('message-box');
+  messageBox.style.borderColor = skin.bgColor || '#a855f7';
+  messageBox.style.boxShadow = `0 0 15px ${skin.bgColor || '#a855f7'}`;
+}
 
     function getSelectedBombIcon() {
       const skin = skins.find(s => s.id === selectedSkinId);
