@@ -1,0 +1,1026 @@
+<html>
+<head>
+<script src="/sdk.js"></script>
+<script>
+    YaGames.init().then(ysdk => {
+        console.log('Yandex SDK initialized');
+        window.ysdk = ysdk;
+    });
+
+        YaGames.init().then(ysdk => {
+        console.log('Yandex SDK initialized');
+        window.ysdk = ysdk;
+        
+        // Показ Sticky-баннера после инициализации
+        ysdk.adv.getBannerAdvStatus().then(({ stickyAdvIsShowing, reason }) => {
+            if (!stickyAdvIsShowing && !reason) {
+                ysdk.adv.showBannerAdv().catch(error => {
+                    console.error('Ошибка показа баннера:', error);
+                });
+            }
+        });
+    });
+</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Игра: Кристаллы и Мины + Ставки</title>
+  <style id="bomb-animation-style"></style>
+  <style>
+    /* Анимация появления страницы */
+    @keyframes fadeInPage {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('background.png') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+      animation: fadeInPage 1s ease forwards;
+      font-size: clamp(14px, 3.5vw, 16px);
+      padding-bottom: 90px;
+    }
+
+    nav {
+      background: #4a148c;
+      padding: clamp(10px, 2vw, 15px);
+      text-align: center;
+      font-size: clamp(16px, 4vw, 20px);
+      font-weight: bold;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      animation: fadeInPage 1.2s ease forwards;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 20px;
+      max-width: 90%;
+      width: min(1200px, 100%);
+      margin: clamp(20px, 5vw, 40px) auto;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #a855f7;
+      box-shadow: 0 0 20px #a855f7;
+      border-radius: 10px;
+      padding: clamp(15px, 3vw, 20px);
+      text-align: center;
+      animation: fadeInPage 1.4s ease forwards;
+    }
+
+    .left-panel {
+      flex: 1 1 400px;
+      max-width: 600px;
+      text-align: left;
+    }
+
+    .right-panel {
+    flex: 1 1 300px;
+    max-width: 500px;
+    margin: 20px 0 0 20px; /* добавлен отступ сверху и слева */
+    padding: 10px; /* внутренний отступ */
+    }
+
+    h1 {
+      margin: clamp(10px, 3vw, 20px) 0;
+      font-size: clamp(24px, 6vw, 32px);
+      text-align: center;
+    }
+
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(50px, 1fr));
+      gap: clamp(5px, 1vw, 10px);
+      justify-content: center;
+      margin-top: 0;
+      animation: fadeInPage 1.6s ease forwards;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .cell {
+      width: 100%;
+      aspect-ratio: 1 / 1; /* Maintain square cells */
+      background: url('crystal-icon.png') center/contain no-repeat;
+  border: 2px solid; /* Удаляем фиксированный цвет */
+  border-color: var(--cell-border-color, #673ab7); /* Используем CSS-переменную */
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s ease;
+      animation: fadeInPage 1.8s ease forwards;
+    }
+
+    .cell:hover:not(.revealed) {
+      transform: scale(1.05);
+ box-shadow: 0 0 10px var(--hover-glow-color);
+    }
+
+    .cell.revealed {
+      background: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: revealCellAnim 0.3s ease forwards;
+    }
+
+    @keyframes revealCellAnim {
+      from {
+        transform: scale(0.6);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .cell img {
+      width: 60%;
+      height: auto;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .cell.bomb {
+      animation: bombFlash 0.6s ease infinite alternate;
+    }
+
+    .cell.safe {
+      background-color: transparent;
+    }
+
+    #controls {
+      margin: clamp(10px, 2vw, 15px) 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: clamp(5px, 1.5vw, 10px);
+      animation: fadeInPage 2s ease forwards;
+    }
+
+    #controls input, #controls select {
+      padding: clamp(8px, 2vw, 12px);
+      font-size: clamp(14px, 3.5vw, 16px);
+      border-radius: 8px;
+      border: 2px solid #673ab7;
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+      backdrop-filter: blur(4px);
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px transparent;
+      flex: 1 1 clamp(120px, 30%, 200px);
+      box-sizing: border-box;
+    }
+
+    #controls input::placeholder {
+      color: #cccccc;
+    }
+
+    #controls input:focus, #controls select:focus {
+      border-color: #a855f7;
+      box-shadow: 0 0 10px #a855f7;
+      outline: none;
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    #controls select {
+      appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: clamp(16px, 3vw, 18px);
+      padding-right: clamp(20px, 5vw, 34px);
+    }
+
+    #controls select, #controls option {
+      color: white;
+      background-color: #1e1e2f;
+    }
+
+    #controls option {
+      padding: clamp(8px, 2vw, 10px);
+      font-size: clamp(14px, 3.5vw, 16px);
+    }
+
+    #controls button {
+      padding: clamp(8px, 2vw, 10px) clamp(12px, 3vw, 16px);
+      background-color: #a855f7;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      font-size: clamp(14px, 3.5vw, 16px);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      flex: 1 1 clamp(100px, 25%, 150px);
+    }
+
+    #controls button:hover {
+      background-color: #9333ea;
+    }
+
+    #balance, #coef, #current-win {
+      margin-top: clamp(8px, 2vw, 10px);
+      font-size: clamp(16px, 4vw, 18px);
+      animation: fadeInPage 2.2s ease forwards;
+    }
+
+    #message-box {
+      position: fixed;
+      top: clamp(10px, 2vw, 20px);
+      right: clamp(10px, 2vw, 20px);
+      max-width: min(90%, 320px);
+      background-color: rgba(0, 0, 0, 0.85);
+      border: 2px solid #a855f7;
+      border-radius: 10px;
+      padding: clamp(10px, 2vw, 15px);
+      font-size: clamp(14px, 3.5vw, 18px);
+      color: white;
+      box-shadow: 0 0 15px #a855f7;
+      display: none;
+      animation: fadeInMessage 0.5s ease forwards;
+      z-index: 1000;
+      cursor: pointer;
+    }
+
+    #message-box.show {
+      display: block;
+    }
+
+    #message-box .close-btn {
+      position: absolute;
+      top: clamp(1px, 1vw, 1px);
+      right: clamp(1px, 1vw, 1px);
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: clamp(16px, 4vw, 20px);
+      cursor: pointer;
+      font-weight: bold;
+      line-height: 1;
+      user-select: none;
+    }
+
+    @keyframes fadeInMessage {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    #skin-panel {
+      max-width: 90%;
+      width: min(800px, 100%);
+      margin: clamp(10px, 3vw, 20px) auto;
+      background: rgba(0, 0, 0, 0.75);
+      border: 2px solid #a855f7;
+      border-radius: 10px;
+      padding: clamp(15px, 3vw, 20px);
+      color: white;
+      box-shadow: 0 0 15px #a855f7;
+      text-align: center;
+    }
+
+    .skin-item {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      margin: clamp(5px, 1.5vw, 10px);
+      padding: clamp(8px, 2vw, 10px);
+      border: 2px solid #673ab7;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      width: clamp(120px, 30%, 150px);
+      box-sizing: border-box;
+    }
+
+    .skin-item img {
+      width: clamp(48px, 15vw, 64px);
+      height: auto;
+      display: block;
+      margin: 0 auto clamp(5px, 1vw, 10px);
+    }
+
+    .skin-item button {
+      margin-top: clamp(5px, 1vw, 10px);
+      padding: clamp(5px, 1.5vw, 8px) clamp(10px, 2vw, 12px);
+      background-color: #a855f7;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      font-size: clamp(12px, 3vw, 14px);
+    }
+
+    /* Media Queries for Additional Responsiveness */
+    @media (max-width: 600px) {
+      #game-board {
+        grid-template-columns: repeat(5, minmax(40px, 1fr));
+        gap: 5px;
+      }
+
+      .cell {
+        border-width: 1px;
+      }
+
+      #controls {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #controls input, #controls select, #controls button {
+        width: 100%;
+        max-width: 300px;
+      }
+
+      #skin-panel {
+        padding: 10px;
+      }
+
+      .skin-item {
+        width: 100%;
+        max-width: 200px;
+      }
+
+      #message-box {
+        top: 10px;
+        right: 10px;
+        padding: 10px;
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      #game-board {
+        grid-template-columns: repeat(5, minmax(30px, 1fr));
+        gap: 3px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      nav {
+        font-size: 14px;
+        padding: 8px;
+      }
+
+      .skin-item img {
+        width: 48px;
+      }
+    }
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 84px)); /* Максимум 84px для каждой ячейки */
+  gap: 5px; /* Отступ между ячейками */
+  justify-content: center; /* Центрирование сетки */
+  max-width: 100%; /* Ограничиваем ширину сетки */
+}
+
+/* Стили для ячеек игрового поля */
+.game-grid div {
+  max-width: 84px; /* Максимальная ширина ячейки */
+  max-height: 84px; /* Максимальная высота ячейки */
+  width: 100%; /* Адаптивная ширина */
+  height: 100%; /* Адаптивная высота */
+  background-color: #ccc; /* Пример фона, замените на ваш стиль */
+  border: 1px solid #000; /* Пример границы, замените на ваш стиль */
+  box-sizing: border-box; /* Учитываем border в размерах */
+}
+
+/* Адаптивность для мобильных устройств */
+@media screen and (max-width: 600px) {
+  .game-grid {
+    grid-template-columns: repeat(5, minmax(0, 60px)); /* Меньше для мобильных */
+  }
+  .game-grid div {
+    max-width: 60px;
+    max-height: 60px;
+  }
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+  </style>
+</head>
+<body>
+  <nav>🎮 Кристаллы и Мины — Игра на удачу!</nav>
+  <div class="container">
+    <div class="left-panel">
+      <h1>Ставь и выигрывай</h1>
+      <div id="balance">Баланс: 100 💰</div>
+
+      <div id="skin-panel">
+        <h2>Выбор скина</h2>
+        <div id="skins-list"></div>
+      </div>
+
+      <div id="controls">
+        <input type="text" id="bet" placeholder="Введите ставку" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?" />
+        <select id="mine-count">
+          <option value="1">1 мина</option>
+          <option value="3" selected>3 мины</option>
+          <option value="5">5 мин</option>
+          <option value="7">7 мин</option>
+        </select>
+        <button onclick="startGame()">Начать игру</button>
+        <button onclick="collectWin()">Забрать выигрыш</button>
+        <button onclick="watchAd()">Смотреть рекламу</button>
+      </div>
+
+      <div id="coef">Коэффициент: 1.00x</div>
+      <div id="current-win">Текущий выигрыш: 0 💰</div>
+    </div>
+
+    <div class="right-panel">
+      <div id="game-board"></div>
+    </div>
+  </div>
+
+  <div id="message-box" onclick="hideMessage()">
+  <button class="close-btn" onclick="event.stopPropagation(); hideMessage()">×</button>
+  <span id="message-text"></span>
+  </div>
+
+<script type="text/javascript">
+  const AD_COOLDOWN = 30000; // Уменьшаем до 30 секунд для тестирования
+let lastAdShown = 0;
+let isAdShowing = false; // Флаг для отслеживания текущего показа
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function InitSDK()
+{
+YaGames
+    .init()
+    .then(ysdk => {
+        console.log('Yandex SDK initialized');
+        window.ysdk = ysdk;
+    });
+}
+
+function showFullscreenAd(context = 'default') {
+    console.log(`Попытка показа рекламы в контексте: ${context}`);
+    
+    if (typeof ysdk === 'undefined') {
+        console.error('Yandex SDK не загружен');
+        return;
+    }
+
+    if (isAdShowing) {
+        console.log('Реклама уже показывается');
+        return;
+    }
+
+    if (Date.now() - lastAdShown < AD_COOLDOWN) {
+        console.log('Недостаточно времени с прошлого показа');
+        return;
+    }
+
+    isAdShowing = true;
+    console.log('Запуск рекламы...');
+
+    ysdk.adv.showFullscreenAdv({
+        callbacks: {
+            onClose: (wasShown) => {
+                console.log(`Реклама закрыта, показана: ${wasShown}`);
+                isAdShowing = false;
+                if (wasShown) {
+                    lastAdShown = Date.now();
+                    // Дополнительные действия при успешном показе
+                    if (context === 'after_loss') {
+                        balance += 5; // Бонус за просмотр после проигрыша
+                        updateUI();
+                    }
+                }
+            },
+            onError: (error) => {
+                console.error('Ошибка рекламы:', error);
+                isAdShowing = false;
+                showMessage("Ошибка загрузки рекламы");
+            }
+        }
+    });
+}
+
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>
+
+  <script>
+document.getElementById('bet').addEventListener('input', function () {
+  // Сохраняем позицию курсора
+  let cursorPosition = this.selectionStart;
+  
+  // Обрабатываем ввод
+  let newValue = this.value
+    .replace(/,/g, '.') // Заменяем запятые на точки
+    .replace(/[^0-9.]/g, '') // Удаляем все кроме цифр и точек
+    .replace(/\.+/g, (match, offset) => offset === 0 ? match : '.') // Удаляем лишние точки
+    .replace(/^\./, '0.') // Если точка в начале, добавляем ноль
+    .replace(/(\..*)\./g, '$1'); // Удаляем повторные точки
+
+  // Разделяем на целую и дробную части
+  const parts = newValue.split('.');
+  if (parts.length > 1) {
+    // Обрезаем дробную часть до 2 знаков
+    parts[1] = parts[1].slice(0, 2);
+    newValue = parts.join('.');
+  }
+
+  // Обновляем значение
+  this.value = newValue;
+
+  // Восстанавливаем позицию курсора
+  const newLength = this.value.length;
+  cursorPosition = Math.min(cursorPosition, newLength);
+  this.setSelectionRange(cursorPosition, cursorPosition);
+});
+
+    const coefficientTable = {
+      1: [1.01, 1.04, 1.09, 1.14, 1.19, 1.26, 1.33, 1.40, 1.49, 1.59, 1.71, 1.84, 1.99, 2.17, 2.39, 2.65, 2.98, 3.41, 3.98, 4.78, 5.97, 7.96, 11.94, 23.88, 23.88],
+      3: [1.07, 1.23, 1.41, 1.64, 1.91, 2.25, 2.67, 3.21, 3.90, 4.80, 6.00, 7.63, 9.93, 13.24, 18.20, 26.01, 39.01, 62.42, 109.24, 218.49, 546.24, 2180.00],
+      5: [1.18, 1.49, 1.91, 2.48, 3.25, 4.34, 5.89, 8.15, 11.55, 16.80, 25.21, 39.21, 63.72, 109.24, 200.29, 400.58, 901.31, 2400.00, 8410.00, 5470.00],
+      7: [1.31, 1.86, 2.67, 3.92, 5.89, 9.06, 14.34, 23.48, 39.90, 70.95, 133.06, 266.12, 576.59, 1380.00, 3800.00, 12680.00, 57008.00, 456660.00]
+    };
+
+    let boardSize = 5;
+    let totalCells = boardSize * boardSize;
+    let cells = [];
+    let bombs = new Set();
+    let revealedCount = 0;
+    let balance = 10000;  //Баланс
+    let currentBet = 0;
+    let coefficient = 1.0;
+    let gameActive = false;
+    let currentMineCount = 3;
+
+    const gameBoard = document.getElementById('game-board');
+    const balanceDisplay = document.getElementById('balance');
+    const coefDisplay = document.getElementById('coef');
+    const winDisplay = document.getElementById('current-win');
+    const messageBox = document.getElementById('message-box');
+    const messageText = document.getElementById('message-text');
+    let messageTimeout;
+
+function setSkinSelectionEnabled(enabled) {
+  document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = !enabled);
+  document.querySelector('#controls button[onclick="startGame()"]').disabled = !enabled;
+}
+
+    function updateUI() {
+    coefDisplay.textContent = `Коэффициент: ${coefficient.toFixed(2)}x`;
+    winDisplay.textContent = `Текущий выигрыш: ${(currentBet * coefficient).toFixed(2)} 💰`;
+    balanceDisplay.textContent = `Баланс: ${balance.toFixed(2)} 💰`;
+    }
+
+function showFullscreenAd(context = 'default') {
+    if (typeof ysdk === 'undefined') return;
+
+    // Скрыть баннер перед показом полноэкранной рекламы
+    ysdk.adv.hideBannerAdv().then(() => {
+        ysdk.adv.showFullscreenAdv({
+            callbacks: {
+                onClose: (wasShown) => {
+                    // Показать баннер снова после закрытия
+                    ysdk.adv.showBannerAdv();
+                    if (wasShown && context === 'after_loss') {
+                        balance += 5;
+                        updateUI();
+                    }
+                },
+                onError: (error) => {
+                    ysdk.adv.showBannerAdv();
+                    console.error('Ошибка рекламы:', error);
+                }
+            }
+        });
+    });
+}
+
+function showBanner() {
+    ysdk.adv.getBannerAdvStatus().then(({ stickyAdvIsShowing, reason }) => {
+        if (!stickyAdvIsShowing && !reason) {
+            ysdk.adv.showBannerAdv();
+        }
+    });
+}
+
+// Скрыть баннер
+function hideBanner() {
+    ysdk.adv.hideBannerAdv();
+}
+
+function startGame() {
+    const betInput = document.getElementById('bet');
+    const mineSelect = document.getElementById('mine-count');
+    const bet = parseFloat(betInput.value.replace(',', '.')); 
+    const mineCount = parseInt(mineSelect.value);
+
+    if (isNaN(bet) || bet < 0.1 || bet > balance) { 
+        showMessage("Введите корректную ставку (мин. 0.1)");
+        return;
+    }
+
+    // Убрано первое списание balance -= bet
+    currentBet = Math.round(bet * 100) / 100;
+    balance = Math.round((balance - currentBet) * 100) / 100; // Единственное списание
+
+    gameActive = true;
+    setSkinSelectionEnabled(false);
+    currentMineCount = mineCount;
+    bombs = new Set();
+    cells = [];
+    revealedCount = 0;
+    gameBoard.innerHTML = '';
+    coefficient = 1.0;
+    hideMessage();
+
+    // Остальной код без изменений
+    while (bombs.size < mineCount) {
+        bombs.add(Math.floor(Math.random() * totalCells));
+    }
+
+    for (let i = 0; i < totalCells; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.style.border = `2px solid ${skins.find(s => s.id === selectedSkinId).bgColor}`;
+        cell.onclick = () => revealCell(i);
+        cell.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            revealCell(i);
+        }, { passive: false });
+        gameBoard.appendChild(cell);
+        cells.push(cell);
+    }
+
+    updateUI();
+    document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = true);
+    document.querySelector('#controls button[onclick="startGame()"]').disabled = true;
+}
+    
+    function revealCell(index) {
+      if (!gameActive) return;
+      const cell = cells[index];
+      if (cell.classList.contains('revealed')) return;
+
+      cell.classList.add('revealed');
+      cell.innerHTML = '';
+
+      if (bombs.has(index)) {
+        cell.classList.add('bomb');
+        const img = document.createElement('img');
+        img.src = getSelectedBombIcon();
+        cell.appendChild(img);
+        gameActive = false;
+        currentBet = 0;
+        revealAllCells();
+        showMessage("💥 Вы проиграли! Попробуйте снова.");
+        document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = false);
+        document.querySelector('#controls button[onclick="startGame()"]').disabled = false;
+      } else {
+        cell.classList.add('safe');
+        const img = document.createElement('img');
+        img.src = getSelectedCrystalIcon();
+        cell.appendChild(img);
+        revealedCount++;
+        if (revealedCount === totalCells - currentMineCount) {
+          const winnings = currentBet * coefficient;
+          balance += winnings;
+          updateUI();
+          showMessage(`🏆 Победа! Вы открыли все безопасные клетки и выиграли ${winnings.toFixed(2)} 💰!`);
+          currentBet = 0;
+          gameActive = false;
+          revealAllCells();
+        document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = false);
+        document.querySelector('#controls button[onclick="startGame()"]').disabled = false;
+        }
+        const table = coefficientTable[currentMineCount];
+        coefficient = table[Math.min(revealedCount - 1, table.length - 1)] || coefficient;
+        updateUI();
+      }
+    }
+
+function setSkinSelectionEnabled(enabled) {
+  document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = !enabled);
+  document.querySelector('#controls button[onclick="startGame()"]').disabled = !enabled;
+}
+
+    function revealAllCells() {
+      cells.forEach((cell, index) => {
+        if (!cell.classList.contains('revealed')) {
+          cell.classList.add('revealed');
+          cell.innerHTML = '';
+          if (bombs.has(index)) {
+            cell.classList.add('bomb');
+            const img = document.createElement('img');
+            img.src = getSelectedBombIcon();
+            cell.appendChild(img);
+          } else {
+            cell.classList.add('safe');
+            const img = document.createElement('img');
+            img.src = getSelectedCrystalIcon();
+            cell.appendChild(img);
+          }
+        }
+      });
+    }
+
+    function collectWin() {
+      if (!gameActive || currentBet === 0) return;
+      const winnings = currentBet * coefficient;
+      balance += winnings;
+      revealAllCells();
+      gameActive = false;
+      showMessage(`🎉 Вы забрали ${winnings.toFixed(2)} 💰!`);
+      currentBet = 0;
+      updateUI();
+document.querySelectorAll('.skin-item button').forEach(btn => btn.disabled = false);
+document.querySelector('#controls button[onclick="startGame()"]').disabled = false;
+
+    }
+
+    function showMessage(msg) {
+      clearTimeout(messageTimeout);
+      messageText.textContent = msg;
+      messageBox.classList.add('show');
+      messageTimeout = setTimeout(() => {
+        hideMessage();
+      }, 5000);
+    }
+
+    function hideMessage() {
+      messageBox.classList.remove('show');
+      clearTimeout(messageTimeout);
+    }
+
+    function watchAd() {
+       hideBanner();
+        // Проверяем доступность Yandex SDK
+        if(typeof ysdk === 'undefined') {
+            showMessage("Реклама недоступна. Попробуйте позже.");
+            return;
+        }
+
+    ysdk.adv.showRewardedVideo({
+        callbacks: {
+            onRewarded: () => {
+                balance += 20;
+                showMessage("📺 +20 💰 за рекламу!");
+                updateUI();
+            },
+            onClose: () => showBanner(), // Вернуть баннер
+            onError: () => showBanner() // Вернуть при ошибке
+        }
+    });
+    }
+
+    const skins = [
+      {
+        id: 'default',
+        name: 'Фиолетовый',
+        price: 0,
+        crystal: 'crystal.png',
+        bomb: 'bomb.png',
+        bought: true,
+        imgWidth: 50,
+        imgHeight: 50,
+        bgColor: '#4a148c',
+        navBgColor: '#4a148c',
+        buttonBgColor: '#a855f7',
+        bodyBgImage: "url('background.jpg')",
+        buttonBgColor: '#a855f7',
+        bombGlowStart: '#7e22ce',  // 🟣 Фиолетовый начальный
+        bombGlowEnd: '#a855f7'     // 🟣 Фиолетовый конечный
+      },
+      {
+        id: 'green',
+        name: 'Зелёный',
+        price: 1000,
+        crystal: 'cristal-green.png',
+        bomb: 'bomb-green.png',
+        bought: false,
+        imgWidth: 80,
+        imgHeight: 50,
+        bgColor: '#1b5e20',
+        navBgColor: '#2e7d32',
+        buttonBgColor: '#43a047',
+        bodyBgImage: "url('background-green.jpg')",
+        buttonBgColor: '#43a047',
+        bombGlowStart: '#00c853', // 🛠️ Добавить
+        bombGlowEnd: '#64dd17'    // 🛠️ Добавить
+      },
+      {
+        id: 'red',
+        name: 'Красный',
+        price: 5000,
+        crystal: 'cristal-red.png',
+        bomb: 'bomb-red.png',
+        bought: false,
+        imgWidth: 80,
+        imgHeight: 50,
+        bgColor: '#b71c1c',
+        navBgColor: '#c62828',
+        buttonBgColor: '#e53935',
+        bodyBgImage: "url('background-red.jpg')",
+        buttonBgColor: '#e53935',
+        bombGlowStart: '#d50000', // 🛠️ Добавить
+        bombGlowEnd: '#ff1744'    // 🛠️ Добавить
+      }
+    ];
+
+    let selectedSkinId = 'default';
+
+    function renderSkins() {
+      const container = document.getElementById('skins-list');
+      container.innerHTML = '';
+      skins.forEach(skin => {
+        const item = document.createElement('div');
+        item.className = 'skin-item';
+        item.innerHTML = `
+          <img src="${skin.crystal}" alt="${skin.name}"
+            style="width: ${skin.imgWidth}px; height: ${skin.imgHeight}px; display: block; margin: 0 auto;" />
+          <div><strong>${skin.name}</strong></div>
+          <div>Цена: ${skin.price} 💰</div>
+          <button onclick="handleSkinAction('${skin.id}')">
+            ${skin.bought ? (skin.id === selectedSkinId ? 'Выбран' : 'Выбрать') : 'Купить'}
+          </button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+function updateBombAnimation(skin) {
+  const styleSheet = document.getElementById('bomb-animation-style');
+  styleSheet.innerHTML = `
+    @keyframes bombFlash {
+      0% { box-shadow: 0 0 8px 2px ${skin.bombGlowStart}; }
+      100% { box-shadow: 0 0 20px 5px ${skin.bombGlowEnd}; }
+    }
+  `;
+}
+
+//applySkinDesign Здесь хранится изменения дизайна при выборе скина
+
+function applySkinDesign(skin) {
+    updateBombAnimation(skin);
+    document.documentElement.style.setProperty(
+    '--cell-border-color', 
+    skin.bgColor || '#673ab7'
+  );
+
+    document.documentElement.style.setProperty(
+    '--hover-glow-color', 
+    skin.buttonBgColor || '#a855f7' // Используем цвет кнопок из скина
+  );
+
+  document.querySelectorAll('.cell').forEach(cell => {
+    cell.style.borderColor = skin.bgColor;
+  });
+
+    document.querySelectorAll('.cell.revealed').forEach(cell => {
+        const isBomb = cell.classList.contains('bomb');
+        const img = cell.querySelector('img');
+        if (img) {
+            img.src = isBomb ? getSelectedBombIcon() : getSelectedCrystalIcon();
+        }
+    });
+
+  document.body.style.backgroundImage = skin.bodyBgImage || '';
+  document.querySelector('nav').style.backgroundColor = skin.navBgColor || '';
+  document.querySelectorAll('#controls button, #skin-panel button').forEach(btn => {
+    btn.style.backgroundColor = skin.buttonBgColor || '';
+    btn.style.borderColor = skin.buttonBgColor || '';
+  });
+  document.querySelector('.container').style.borderColor = skin.bgColor || '';
+  document.querySelector('.container').style.boxShadow = `0 0 20px ${skin.bgColor || '#a855f7'}`;
+  document.getElementById('skin-panel').style.borderColor = skin.bgColor || '';
+  document.getElementById('skin-panel').style.boxShadow = `0 0 15px ${skin.bgColor || '#a855f7'}`;
+
+  document.querySelectorAll('#controls input, #controls select').forEach(el => {
+    el.style.borderColor = skin.bgColor || '#673ab7';
+    el.style.boxShadow = `0 0 10px ${skin.bgColor || '#a855f7'}`;
+    el.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+    el.style.color = 'white';
+  });
+
+  // Обновляем стили .skin-item
+  setTimeout(() => {
+    document.querySelectorAll('.skin-item').forEach(item => {
+      item.style.borderColor = skin.bgColor || '#673ab7';
+      item.style.boxShadow = `0 0 10px ${skin.bgColor || '#a855f7'}`;
+      item.style.backgroundColor = 'rgba(255, 255, 255, 0.07)';
+      item.style.color = 'white';
+    });
+
+    document.querySelectorAll('.skin-item button').forEach(btn => {
+      btn.style.backgroundColor = skin.buttonBgColor || '#a855f7';
+      btn.style.borderColor = skin.buttonBgColor || '#a855f7';
+    });
+  }, 0);
+
+  // Обновляем message-box
+  const messageBox = document.getElementById('message-box');
+  messageBox.style.borderColor = skin.bgColor || '#a855f7';
+  messageBox.style.boxShadow = `0 0 15px ${skin.bgColor || '#a855f7'}`;
+}
+
+    function getSelectedBombIcon() {
+      const skin = skins.find(s => s.id === selectedSkinId);
+      return skin?.bomb || 'bomb.png';
+    }
+
+    function getSelectedCrystalIcon() {
+      const skin = skins.find(s => s.id === selectedSkinId);
+      return skin?.crystal || 'crystal.png';
+    }
+
+function handleSkinAction(id) {
+    const skin = skins.find(s => s.id === id);
+    if (!skin.bought) {
+        if (balance >= skin.price) {
+            balance -= skin.price;
+            skin.bought = true;
+            selectedSkinId = skin.id;
+            applySkinDesign(skin);
+            showMessage(`✅ Куплен скин "${skin.name}"`);
+            updateUI();
+        } else {
+            showMessage('Недостаточно средств');
+            return;
+        }
+    } else {
+        selectedSkinId = skin.id;
+        applySkinDesign(skin);
+        
+        // ДОБАВЛЕННЫЙ КОД ДЛЯ ОБНОВЛЕНИЯ ЯЧЕЕК ===========
+        if (gameActive) {
+            // Обновляем границы всех существующих ячеек
+            cells.forEach(cell => {
+                cell.style.borderColor = skin.bgColor;
+            });
+        }
+        // ================================================
+    }
+    renderSkins();
+}
+
+window.onload = () => {
+  setTimeout(() => showFullscreenAd('first_load'), 3000);
+  const skin = skins.find(s => s.id === selectedSkinId);
+  updateBombAnimation(skin);
+  if (skin) {
+    document.documentElement.style.setProperty(
+      '--cell-border-color', 
+      skin.bgColor
+    );
+    applySkinDesign(skin);
+  }
+  renderSkins();
+  updateUI();
+
+};
+  </script>
+</body>
+</html>
